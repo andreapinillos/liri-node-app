@@ -1,157 +1,126 @@
-//Grab data from keys.js
-var keys = require('./keys.js');
-var request = require('request');
-var twitter = require('twitter');
-var spotify = require('spotify');
-var client = new twitter(keys.twitterKeys);
-var fs = require('fs');
-
-//Stored argument's array
-var nodeArgv = process.argv;
-var command = process.argv[2];
-//movie or song
-var x = "";
-//attaches multiple word arguments
-for (var i=3; i<nodeArgv.length; i++){
-  if(i>3 && i<nodeArgv.length){
-    x = x + "+" + nodeArgv[i];
-  } else{
-    x = x + nodeArgv[i];
-  }
-}
-
-//switch case
-switch(command){
-  case "my-tweets":
-    showTweets();
-  break;
-
-  case "spotify-this-song":
-    if(x){
-      spotifySong(x);
-    } else{
-      spotifySong("Fluorescent Adolescent");
-    }
-  break;
-
-  case "movie-this":
-    if(x){
-      omdbData(x)
-    } else{
-      omdbData("Mr. Nobody")
-    }
-  break;
-
-  case "do-what-it-says":
-    doThing();
-  break;
-
-  default:
-    console.log("{Please enter a command: my-tweets, spotify-this-song, movie-this, do-what-it-says}");
-  break;
-}
-
-function showTweets(){
-  //Display last 20 Tweets
-  var screenName = {screen_name: 'kiddycads'};
-  client.get('statuses/user_timeline', screenName, function(error, tweets, response){
-    if(!error){
-      for(var i = 0; i<tweets.length; i++){
-        var date = tweets[i].created_at;
-        console.log("@kiddycads: " + tweets[i].text + " Created At: " + date.substring(0, 19));
-        console.log("-----------------------");
-        
-        //adds text to log.txt file
-        fs.appendFile('log.txt', "@kiddycads: " + tweets[i].text + " Created At: " + date.substring(0, 19));
-        fs.appendFile('log.txt', "-----------------------");
-      }
-    }else{
-      console.log('Error occurred');
-    }
-  });
-}
-
-function spotifySong(song){
-  var spotify = new Spotify({
-  id: keys.spotifyKeys.id,
-    secret: keys.spotifyKeys.secret
+// DEPENDENCIES
+// =====================================
+// Import the Keys file
+var keys = require("./keys.js");
+// Import the Twitter NPM package.
+var Twitter = require("twitter");
+// Import the node-spotify-api NPM package.
+var Spotify = require("node-spotify-api");
+// Import the request npm package.
+var request = require("request");
+// Import the FS package for read/write.
+var fs = require("fs");
+// Initialize the spotify API client using our client id and secret
+var spotify = new Spotify({
+  id: "34e84d93de6a4650815e5420e0361fd3",
+  secret: "5162cd8b5cf940f48702dffe096c2acb"
 });
-  spotify.search({ type: 'track', query: song}, function(error, data){
-    if(!error){
-      for(var i = 0; i < response.tracks.items[0].length; i++){
-        var songData = response.tracks.items[i];
-        //artist
-        console.log("Artist: " + songData.artists[0].name);
-        //song name
-        console.log("Song: " + songData.name);
-        //spotify preview link
-        console.log("Preview URL: " + songData.preview_url);
-        //album name
-        console.log("Album: " + songData.album.name);
-        console.log("-----------------------");
-        
-        //adds text to log.txt
-        fs.appendFile('log.txt', songData.artists[0].name);
-        fs.appendFile('log.txt', songData.name);
-        fs.appendFile('log.txt', songData.preview_url);
-        fs.appendFile('log.txt', songData.album.name);
-        fs.appendFile('log.txt', "-----------------------");
+// FUNCTIONS
+// =====================================
+// Writes to the log.txt file
+var getArtistNames = function(artist) {
+  return artist.name;
+};
+// Function for running a Spotify search
+var getMeSpotify = function(songName) {
+  if (songName === undefined) {
+    songName = "What's my age again";
+  }
+  spotify.search(
+    {
+      type: "track",
+      query: songName
+    },
+    function(err, data) {
+      if (err) {
+        console.log("Error occurred: " + err);
+        return;
       }
-    } else{
-      console.log('Error occurred.');
+      var songs = data.tracks.items;
+      for (var i = 0; i < songs.length; i++) {
+        console.log(i);
+        console.log("artist(s): " + songs[i].artists.map(getArtistNames));
+        console.log("song name: " + songs[i].name);
+        console.log("preview song: " + songs[i].preview_url);
+        console.log("album: " + songs[i].album.name);
+        console.log("-----------------------------------");
+      }
+    }
+  );
+};
+// Function for running a Twitter Search
+var getMyTweets = function() {
+  var client = new Twitter(keys.twitterKeys);
+  var params = {
+    screen_name: "cnn"
+  };
+  client.get("statuses/user_timeline", params, function(error, tweets, response) {
+    if (!error) {
+      for (var i = 0; i < tweets.length; i++) {
+        console.log(tweets[i].created_at);
+        console.log("");
+        console.log(tweets[i].text);
+      }
     }
   });
-}
-
-function omdbData(movie){
-  var omdbURL = "http://www.omdbapi.com/?t=" + movie + "&y=&plot=short&apikey=40e9cece";;
-
-  request(omdbURL, function (error, response, body){
-    if(!error && response.statusCode == 200){
-      var body = JSON.parse(body);
-
-      console.log("Title: " + body.Title);
-      console.log("Release Year: " + body.Year);
-      console.log("IMdB Rating: " + body.imdbRating);
-      console.log("Country: " + body.Country);
-      console.log("Language: " + body.Language);
-      console.log("Plot: " + body.Plot);
-      console.log("Actors: " + body.Actors);
-      console.log("Rotten Tomatoes Rating: " + body.Ratings[1].Value);
-      console.log("Rotten Tomatoes URL: " + body.Website);
-
-      //adds text to log.txt
-      fs.appendFile('log.txt', "Title: " + body.Title);
-      fs.appendFile('log.txt', "Release Year: " + body.Year);
-      fs.appendFile('log.txt', "IMdB Rating: " + body.imdbRating);
-      fs.appendFile('log.txt', "Country: " + body.Country);
-      fs.appendFile('log.txt', "Language: " + body.Language);
-      fs.appendFile('log.txt', "Plot: " + body.Plot);
-      fs.appendFile('log.txt', "Actors: " + body.Actors);
-      fs.appendFile('log.txt', "Rotten Tomatoes Rating: " + body.Ratings[1].Value);
-      fs.appendFile('log.txt', "Rotten Tomatoes URL: " + body.Website);
-
-    } else{
-      console.log('Error occurred.')
-    }
-    if(movie === "Mr. Nobody"){
-      console.log("-----------------------");
-      console.log("If you haven't watched 'Mr. Nobody,' then you should: http://www.imdb.com/title/tt0485947/");
-      console.log("It's on Netflix!");
-
-      //adds text to log.txt
-      fs.appendFile('log.txt', "-----------------------");
-      fs.appendFile('log.txt', "If you haven't watched 'Mr. Nobody,' then you should: http://www.imdb.com/title/tt0485947/");
-      fs.appendFile('log.txt', "It's on Netflix!");
+};
+// Function for running a Movie Search
+var getMeMovie = function(movieName) {
+  if (movieName === undefined) {
+    movieName = "Mr Nobody";
+  }
+  var urlHit = "http://www.omdbapi.com/?t=" + movieName + "&y=&plot=full&tomatoes=true&apikey=40e9cece";
+  request(urlHit, function(error, response, body) {
+    if (!error && response.statusCode === 200) {
+      var jsonData = JSON.parse(body);
+      console.log("Title: " + jsonData.Title);
+      console.log("Year: " + jsonData.Year);
+      console.log("Rated: " + jsonData.Rated);
+      console.log("IMDB Rating: " + jsonData.imdbRating);
+      console.log("Country: " + jsonData.Country);
+      console.log("Language: " + jsonData.Language);
+      console.log("Plot: " + jsonData.Plot);
+      console.log("Actors: " + jsonData.Actors);
+      console.log("Rotton Tomatoes URL: " + jsonData.tomatoURL);
     }
   });
-
-}
-
-function doThing(){
-  fs.readFile('random.txt', "utf8", function(error, data){
-    var txt = data.split(',');
-
-    spotifySong(txt[1]);
+};
+// Function for running a command based on text file
+var doWhatItSays = function() {
+  fs.readFile("random.txt", "utf8", function(error, data) {
+    console.log(data);
+    var dataArr = data.split(",");
+    if (dataArr.length === 2) {
+      pick(dataArr[0], dataArr[1]);
+    }
+    else if (dataArr.length === 1) {
+      pick(dataArr[0]);
+    }
   });
-}
+};
+// Function for determining which command is executed
+var pick = function(caseData, functionData) {
+  switch (caseData) {
+    case "my-tweets":
+      getMyTweets();
+      break;
+    case "spotify-this-song":
+      getMeSpotify(functionData);
+      break;
+    case "movie-this":
+      getMeMovie(functionData);
+      break;
+    case "do-what-it-says":
+      doWhatItSays();
+      break;
+    default:
+      console.log("LIRI doesn't know that");
+  }
+};
+// Function which takes in command line arguments and executes correct function accordigly
+var runThis = function(argOne, argTwo) {
+  pick(argOne, argTwo);
+};
+// MAIN PROCESS
+// =====================================
+runThis(process.argv[2], process.argv[3]);
