@@ -52,7 +52,7 @@ var getMeSpotify = function(songName) {
 var getMyTweets = function() {
   var client = new Twitter(keys.twitterKeys);
   var params = {
-    screen_name: "cnn"
+    screen_name: "kiddycads"
   };
   client.get("statuses/user_timeline", params, function(error, tweets, response) {
     if (!error) {
